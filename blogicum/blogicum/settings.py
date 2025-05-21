@@ -8,7 +8,10 @@ SECRET_KEY = 'django-insecure-axq20#^zntowj1u#%#@^*l5*f5u#=2+5r&!fk!b^sc+qz%16oq
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+]
 
 
 INSTALLED_APPS = [
@@ -103,3 +106,5 @@ STATICFILES_DIRS = [
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
