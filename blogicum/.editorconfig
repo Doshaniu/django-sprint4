@@ -1,0 +1,11 @@
+root = true
+
+
+[*.py]
+intedent_style = space
+intedent_size = 4
+
+
+[*.html]
+intedent_style = space
+intedent_size = 2
