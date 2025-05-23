@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.contrib.auth.models import User
-
+from django.utils import timezone
 from core.models import CreatedModel
 
 from .constants import MAX_LENGTH
@@ -16,13 +16,18 @@ class Post(CreatedModel):
     )
     text = models.TextField(verbose_name='Текст')
     pub_date = models.DateTimeField(
-        auto_now_add=False,
+        # auto_now_add=False,
         verbose_name='Дата и время публикации',
         help_text=(
             'Если установить дату и время в будущем '
             '— можно делать отложенные публикации.'
-        )
+        ),
+        default=timezone.now,
+        blank=True,
+        null=True
+
     )
+    image = models.ImageField('Фото', upload_to='posts_images', blank=True)
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -90,5 +95,19 @@ class Location(CreatedModel):
         return self.name
 
 
-# class Profile(models.Model):
-#     user = models.OneToOneField(User, on_delete=models.CASCADE)
+class Comment(models.Model):
+    text = models.TextField(verbose_name='Введите комментарий')
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        related_name='comment'
+    )
+    created_at = models.DateField(
+        auto_now_add=True,
+        verbose_name='Дата создания')
+    edited_at = models.DateField(auto_now=True, verbose_name='Дата изменения')
+
+    class Meta:
+        verbose_name = 'комментарий'
+        verbose_name_plural = 'комментарии'
+        ordering = ['created_at']

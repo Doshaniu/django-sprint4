@@ -13,7 +13,8 @@ class PostAdmin(admin.ModelAdmin):
         'author',
         'location',
         'category',
-        'is_published'
+        'is_published',
+        'image'
     )
     list_editable = (
         'category',
