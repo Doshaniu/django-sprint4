@@ -1,31 +1,19 @@
-from django.shortcuts import get_object_or_404, render, redirect
-from django.utils import timezone
 from django.contrib.auth.forms import UserCreationForm
-from django.views.generic.edit import CreateView
-from django.views.generic import DetailView, ListView, UpdateView, DeleteView
-from django.urls import reverse_lazy
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LogoutView
 from django.core.paginator import Paginator
-from django.db.models import Q
-from django.http import HttpResponse
-from django.core.mail import send_mail
-from .constants import POST_LIMIT_ON_PAGE
-from .models import Category, Post, Comment
-from .forms import CommentForm, ProfileEditForm
-from .custom_mixins import CustomAuthorMixin
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.views.generic import DeleteView, DetailView, ListView, UpdateView
+from django.views.generic.edit import CreateView
 
-# def index(request):
-#     """Главная страница с лентой постов, отсортированная по дате публикации."""
-#     template_name = 'blog/index.html'
-#     posts = Post.objects.filter(
-#         is_published=True,
-#         category__is_published=True,
-#         pub_date__lte=timezone.now()
-#     )[:POST_LIMIT_ON_PAGE]
-#     context = {'posts': posts}
-#     return render(request, template_name, context)
+from .constants import POST_LIMIT_ON_PAGE
+from .custom_mixins import CustomAuthorMixin
+from .forms import CommentForm, ProfileEditForm
+from .models import Category, Comment, Post
 
 
 class HomePageListView(ListView):
@@ -41,42 +29,7 @@ class HomePageListView(ListView):
             is_published=True,
             category__is_published=True,
             pub_date__lte=timezone.now()
-        )
-
-
-# def post_detail(request, pk):
-#     """Детальное описание поста по его идентификатору."""
-#     post = get_object_or_404(
-#         Post,
-#         pk=pk,
-#         is_published=True,
-#         pub_date__lte=timezone.now(),
-#         category__is_published=True
-#     )
-#     template_name = 'blog/detail.html'
-#     context = {'post': post}
-    # return render(request, template_name, context)
-
-
-
-# def category_posts(request, category_slug):
-#     """Страница с постами отсортированными по категории."""
-#     template_name = 'blog/category.html'
-#     category = get_object_or_404(
-#         Category,
-#         slug=category_slug,
-#         is_published=True
-#     )
-#     post_list = category.posts.filter(
-#         is_published=True,
-#         pub_date__lte=timezone.now()
-#     ).order_by('-pub_date')
-#     context = {
-#         'category': category,
-#         'post_list': post_list
-#     }
-
-#     return render(request, template_name, context)
+        ).annotate(comment_count=Count('comments')).order_by('-pub_date')
 
 
 class CategoryPostsListView(ListView):
@@ -110,6 +63,8 @@ class RegisterCreationView(CreateView):
 
 
 class ProfileDetailView(DetailView):
+    """Страница профиля пользователя с его постами."""
+
     template_name = 'blog/profile.html'
     model = User
     context_object_name = 'profile'
@@ -128,20 +83,24 @@ class ProfileDetailView(DetailView):
                 category__is_published=True,
                 pub_date__lte=timezone.now()
             )
-            paginator = Paginator(posts, POST_LIMIT_ON_PAGE)
-            page_number = self.request.GET.get('page')
-            context['page_obj'] = paginator.get_page(page_number)
-            context['posts'] = posts
+        posts = posts.annotate(
+            comment_count=Count('comments')
+        ).order_by('-pub_date')
+        paginator = Paginator(posts, POST_LIMIT_ON_PAGE)
+        page_number = self.request.GET.get('page')
+        context['page_obj'] = paginator.get_page(page_number)
         context['can_edit'] = self.request.user == user
         return context
 
 
 class ProfileEditView(LoginRequiredMixin, UpdateView):
+    """Страница редактирования профиля пользователя."""
+
     model = User
     form_class = ProfileEditForm
     template_name = 'blog/user.html'
     success_url = reverse_lazy('blog:profile')
-    
+
     def get_object(self):
         return self.request.user
 
@@ -158,6 +117,8 @@ class CustomLogoutView(LogoutView):
 
 
 class CreatePostView(LoginRequiredMixin, CreateView):
+    """Страница для создания поста."""
+
     model = Post
     template_name = 'blog/create.html'
     fields = [
@@ -174,16 +135,28 @@ class CreatePostView(LoginRequiredMixin, CreateView):
 
 
 class PostDetailView(DetailView):
+    """Страница детального описания поста,
+    с комментариями.
+    """
+
     model = Post
     template_name = 'blog/detail.html'
 
     def get_object(self):
-        condition = (
-            Q(author=self.request.user) |
-            (Q(is_published=True) &
-             Q(category__is_published=True) &
-             Q(pub_date__lte=timezone.now()))
-        )
+        user = self.request.user
+        if user.is_authenticated:
+            condition = (
+                Q(author=self.request.user)
+                | (Q(is_published=True)
+                    & Q(category__is_published=True)
+                    & Q(pub_date__lte=timezone.now()))
+            )
+        else:
+            condition = (
+                Q(is_published=True)
+                & Q(category__is_published=True)
+                & Q(pub_date__lte=timezone.now())
+            )
         post = get_object_or_404(
             Post.objects.filter(condition),
             pk=self.kwargs['post_id'],
@@ -194,30 +167,29 @@ class PostDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         if self.request.user.is_authenticated:
             context['form'] = CommentForm()
-        context['comments'] = self.object.comments.select_related('author').all()
+        context['comments'] = (
+            self.object.comments.select_related('author').all()
+        )
         return context
 
 
 class PostEditView(CustomAuthorMixin, UpdateView):
+    """Страница редактирования поста."""
+
     model = Post
     fields = ['title', 'text', 'category', 'location', 'image', 'pub_date']
     template_name = 'blog/create.html'
+    pk_url_kwarg = 'post_id'
 
     def get_success_url(self):
         return reverse_lazy(
-            'blog:post_detail', kwargs={'post_id': self.object.post_id}
+            'blog:post_detail', kwargs={'post_id': self.object.pk}
         )
-
-    # def test_func(self):
-    #     post = self.get_object()
-    #     return post.author == self.request.user
-
-    # def handle_no_permission(self):
-    #     post = self.get_object()
-    #     return redirect('blog:post_detail', pk=post.pk)
 
 
 class PostDeleteView(CustomAuthorMixin, DeleteView):
+    """Страница удаления поста."""
+
     model = Post
     template_name = 'blog/create.html'
     pk_url_kwarg = 'post_id'
@@ -229,6 +201,10 @@ class PostDeleteView(CustomAuthorMixin, DeleteView):
 
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
+    """Создание комментария к посту,
+    с проверкой авторизации.
+    """
+
     model = Comment
     form_class = CommentForm
     template_name = 'blog/comment.html'
@@ -245,6 +221,10 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
 
 
 class CommentEditView(CustomAuthorMixin, UpdateView):
+    """Редактирование комментария,
+    с проверкой на авторство.
+    """
+
     model = Comment
     form_class = CommentForm
     template_name = 'blog/comment.html'
@@ -262,30 +242,15 @@ class CommentEditView(CustomAuthorMixin, UpdateView):
             post_id=self.kwargs['post_id']
         )
 
-    # def test_func(self):
-    #     comment = self.get_object()
-    #     return comment.author == self.request.user
-
-    # def handle_no_permission(self):
-    #     comment = self.get_object()
-    #     return redirect('blog:post_detail', post_id=comment.post_id)
-
 
 class CommentDeleteView(CustomAuthorMixin, DeleteView):
+    """Удаление комментария, с проверкой на авторство."""
+
     model = Comment
     template_name = 'blog/comment.html'
     pk_url_kwarg = 'comment_id'
 
     def get_success_url(self):
         return reverse_lazy(
-            'blog:post_detail', kwargs={'post_id': self.object.post.id}
+            'blog:post_detail', kwargs={'post_id': self.object.post.pk}
         )
-
-# def test_email(request):
-#     send_mail(
-#         subject='Письмо для теста',
-#         message='Тествое письмо для проверки работы функции',
-#         from_email='mouceme@gmail.com',
-#         recipient_list=['Admin'],
-#     ),
-#     return HttpResponse("Письмо отправлено (и сохранено в sent_emails/)")

@@ -1,6 +1,4 @@
 from django.urls import path
-from django.contrib.auth import views as auth_views
-from django.urls import reverse_lazy
 
 from . import views
 
@@ -64,5 +62,4 @@ urlpatterns = [
         views.CommentDeleteView.as_view(),
         name='delete_comment'
     ),
-    # path('send-test-email/', views.test_email, name='send_test_email'),
 ]

@@ -1,19 +1,16 @@
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import UserPassesTestMixin
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
 
 
 class CustomAuthorMixin(UserPassesTestMixin):
-    
+    """Миксин для проверки, что текущий пользователь
+    является автором.
+    """
+
     def test_func(self):
-        object = self.get_object()
-        return object.author == self.request.user
-    
+        obj = self.get_object()
+        return obj.author == self.request.user
+
     def handle_no_permission(self):
-        object = self.get_object()
-        return redirect('blog:post_detail', post_id=object.pk)
-    
-    # def get_success_url(self):
-    #     return reverse_lazy(
-    #         'blog:post_detail', kwargs={'post_id': self.object.pk}
-    #     )
+        obj = self.get_object()
+        return redirect('blog:post_detail', post_id=obj.pk)

@@ -1,8 +1,8 @@
-from django.contrib.auth import get_user_model
-from django.db import models
-from django.contrib.auth.models import User
-from django.utils import timezone
 from core.models import CreatedModel
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import User
+from django.db import models
+from django.utils import timezone
 
 from .constants import MAX_LENGTH
 
@@ -105,14 +105,13 @@ class Comment(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='author',
+        related_name='comments',
         blank=False,
         null=False
     )
-    created_at = models.DateField(
+    created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Дата создания')
-    edited_at = models.DateField(auto_now=True, verbose_name='Дата изменения')
 
     class Meta:
         verbose_name = 'комментарий'
