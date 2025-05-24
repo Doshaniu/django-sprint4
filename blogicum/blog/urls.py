@@ -1,4 +1,6 @@
 from django.urls import path
+from django.contrib.auth import views as auth_views
+from django.urls import reverse_lazy
 
 from . import views
 
@@ -6,11 +8,6 @@ app_name = 'blog'
 
 urlpatterns = [
     path('', views.HomePageListView.as_view(), name='index'),
-    path(
-        'posts/<int:pk>/',
-        views.PostDetailView.as_view(),
-        name='post_detail'
-    ),
     path(
         'category/<slug:category_slug>/',
         views.CategoryPostsListView.as_view(),
@@ -22,12 +19,34 @@ urlpatterns = [
         name='registration'
     ),
     path(
+        'profile/edit/',
+        views.ProfileEditView.as_view(),
+        name='edit_profile'
+    ),
+    path(
         'profile/<str:username>/',
         views.ProfileDetailView.as_view(),
-        name='profile'),
-    path('posts/create/', views.CreatePostView.as_view(), name='create'),
+        name='profile'
+    ),
     path(
-        'posts/<int:pk>/edit/', views.PostEditView.as_view(), name='post_edit'
+        'posts/create/',
+        views.CreatePostView.as_view(),
+        name='create_post'
+    ),
+    path(
+        'posts/<int:post_id>/edit/',
+        views.PostEditView.as_view(),
+        name='edit_post'
+    ),
+    path(
+        'posts/<int:post_id>/',
+        views.PostDetailView.as_view(),
+        name='post_detail'
+    ),
+    path(
+        'posts/<int:post_id>/delete/',
+        views.PostDeleteView.as_view(),
+        name='delete_post'
     ),
     path(
         'posts/<int:post_id>/comment/',
@@ -37,6 +56,13 @@ urlpatterns = [
     path(
         'posts/<int:post_id>/edit_comment/<int:comment_id>/',
         views.CommentEditView.as_view(),
-        name='comment_edit'
-    )
+        name='edit_comment'
+    ),
+
+    path(
+        'posts/<int:post_id>/delete_comment/<int:comment_id>/',
+        views.CommentDeleteView.as_view(),
+        name='delete_comment'
+    ),
+    # path('send-test-email/', views.test_email, name='send_test_email'),
 ]
