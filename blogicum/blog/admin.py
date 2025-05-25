@@ -5,7 +5,7 @@ from .models import Category, Location, Post
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    """Более гибкая и удобная админка для управления сайтом."""
+    """Настройки для отображения, поиска, фильтраций в админке"""
 
     list_display = (
         'title',
@@ -25,5 +25,20 @@ class PostAdmin(admin.ModelAdmin):
     list_display_links = ('title',)
 
 
-admin.site.register(Category)
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = (
+        'title',
+        'description',
+        'slug',
+    )
+    list_editable = (
+        'description',
+        'slug',
+    )
+    search_fields = ('title',)
+    list_filter = ('slug',)
+    list_display_links = ('title',)
+
+
 admin.site.register(Location)

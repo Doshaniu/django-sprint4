@@ -2,7 +2,6 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LogoutView
-from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
@@ -14,6 +13,7 @@ from .constants import POST_LIMIT_ON_PAGE
 from .custom_mixins import CustomAuthorMixin
 from .forms import CommentForm, ProfileEditForm
 from .models import Category, Comment, Post
+from .utils import paginate_page
 
 
 class HomePageListView(ListView):
@@ -86,9 +86,7 @@ class ProfileDetailView(DetailView):
         posts = posts.annotate(
             comment_count=Count('comments')
         ).order_by('-pub_date')
-        paginator = Paginator(posts, POST_LIMIT_ON_PAGE)
-        page_number = self.request.GET.get('page')
-        context['page_obj'] = paginator.get_page(page_number)
+        context['page_obj'] = paginate_page(self.request, posts)
         context['can_edit'] = self.request.user == user
         return context
 

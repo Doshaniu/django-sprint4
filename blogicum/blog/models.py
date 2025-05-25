@@ -1,8 +1,9 @@
-from core.models import CreatedModel
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
+
+from core.models import CreatedModel
 
 from .constants import MAX_LENGTH
 
@@ -16,7 +17,6 @@ class Post(CreatedModel):
     )
     text = models.TextField(verbose_name='Текст')
     pub_date = models.DateTimeField(
-        # auto_now_add=False,
         verbose_name='Дата и время публикации',
         help_text=(
             'Если установить дату и время в будущем '
@@ -106,8 +106,6 @@ class Comment(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='comments',
-        blank=False,
-        null=False
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
